@@ -19,9 +19,15 @@ package com.vokal.async_image_cache;
 
 import static com.vokal.async_image_cache.LogUtils.*;
 
+import android.content.ContentResolver;
 import android.content.Context;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.net.Uri;
+import android.provider.ContactsContract;
+import android.provider.MediaStore.Images;
 import android.widget.ImageView;
 
 import java.io.*;
@@ -42,6 +48,8 @@ public class ImageFetcher extends ImageWorker {
     private static final String HTTP_CACHE_DIR = "http";
     private static final int DEFAULT_IMAGE_HEIGHT = 1024;
     private static final int DEFAULT_IMAGE_WIDTH = 1024;
+    
+    private static Context sContext;
 
     protected int mImageWidth;
     protected int mImageHeight;
@@ -68,6 +76,7 @@ public class ImageFetcher extends ImageWorker {
     }
 
     private void init(Context context, int imageWidth, int imageHeight) {
+        sContext = context.getApplicationContext();
         mImageWidth = imageWidth;
         mImageHeight = imageHeight;
         mHttpCacheDir = ImageCache.getDiskCacheDir(context, HTTP_CACHE_DIR);
@@ -148,45 +157,76 @@ public class ImageFetcher extends ImageWorker {
         final String key = ImageCache.hashKeyForDisk(urlString);
         FileDescriptor fileDescriptor = null;
         FileInputStream fileInputStream = null;
-        DiskLruCache.Snapshot snapshot;
-        synchronized (mHttpDiskCacheLock) {
-            // Wait for disk cache to initialize
-            while (mHttpDiskCacheStarting) {
-                try {
-                    mHttpDiskCacheLock.wait();
-                } catch (InterruptedException e) {}
+        
+        // Check if the urlString is Contact URI and attempt to get FileDescriptor
+        if (urlString.startsWith(ContactsContract.Contacts.CONTENT_URI.toString())) {
+            final ContentResolver cr = sContext.getContentResolver();
+            fileInputStream = (FileInputStream) ContactsContract.Contacts.openContactPhotoInputStream(cr, Uri.parse(urlString));
+            try {
+                fileDescriptor = fileInputStream.getFD();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-
-            if (mHttpDiskCache != null) {
+        }
+        
+        // Check if the urlString is a local File URI and attempt to get FileDescriptor
+        if (fileDescriptor == null) {            
+            Uri uri = Uri.parse(urlString);
+            if (!uri.getScheme().equals("http") && !uri.getScheme().equals("https")) {
+                final ContentResolver cr = sContext.getContentResolver();
                 try {
-                    snapshot = mHttpDiskCache.get(key);
-                    if (snapshot == null) {
-                        LOGD(TAG, "processBitmap, not found in http cache, downloading...");
-                        DiskLruCache.Editor editor = mHttpDiskCache.edit(key);
-                        if (editor != null) {
-                            if (downloadUrlToStream(urlString,
-                                    editor.newOutputStream(DISK_CACHE_INDEX))) {
-                                editor.commit();
-                            } else {
-                                editor.abort();
-                            }
-                        }
-                        snapshot = mHttpDiskCache.get(key);
-                    }
-                    if (snapshot != null) {
-                        fileInputStream =
-                                (FileInputStream) snapshot.getInputStream(DISK_CACHE_INDEX);
-                        fileDescriptor = fileInputStream.getFD();
-                    }
+                    fileInputStream = (FileInputStream) cr.openInputStream(uri);
+                    fileDescriptor = fileInputStream.getFD();
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
                 } catch (IOException e) {
-                    LOGE(TAG, "processBitmap - " + e);
-                } catch (IllegalStateException e) {
-                    LOGE(TAG, "processBitmap - " + e);
-                } finally {
-                    if (fileDescriptor == null && fileInputStream != null) {
-                        try {
-                            fileInputStream.close();
-                        } catch (IOException e) {}
+                    e.printStackTrace();
+                }
+                
+            }
+        }
+        
+        if (fileDescriptor == null) {
+            DiskLruCache.Snapshot snapshot;
+            synchronized (mHttpDiskCacheLock) {
+                // Wait for disk cache to initialize
+                while (mHttpDiskCacheStarting) {
+                    try {
+                        mHttpDiskCacheLock.wait();
+                    } catch (InterruptedException e) {}
+                }
+    
+                if (mHttpDiskCache != null) {
+                    try {
+                        snapshot = mHttpDiskCache.get(key);
+                        if (snapshot == null) {
+                            LOGD(TAG, "processBitmap, not found in http cache, downloading...");
+                            DiskLruCache.Editor editor = mHttpDiskCache.edit(key);
+                            if (editor != null) {
+                                if (downloadUrlToStream(urlString,
+                                        editor.newOutputStream(DISK_CACHE_INDEX))) {
+                                    editor.commit();
+                                } else {
+                                    editor.abort();
+                                }
+                            }
+                            snapshot = mHttpDiskCache.get(key);
+                        }
+                        if (snapshot != null) {
+                            fileInputStream =
+                                    (FileInputStream) snapshot.getInputStream(DISK_CACHE_INDEX);
+                            fileDescriptor = fileInputStream.getFD();
+                        }
+                    } catch (IOException e) {
+                        LOGE(TAG, "processBitmap - " + e);
+                    } catch (IllegalStateException e) {
+                        LOGE(TAG, "processBitmap - " + e);
+                    } finally {
+                        if (fileDescriptor == null && fileInputStream != null) {
+                            try {
+                                fileInputStream.close();
+                            } catch (IOException e) {}
+                        }
                     }
                 }
             }
