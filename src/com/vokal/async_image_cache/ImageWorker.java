@@ -111,6 +111,10 @@ public abstract class ImageWorker {
         loadImage(data, imageView, loadingBitmaps.get(resId));
     }
 
+    private static boolean isNullOrEmpty(final String s) {
+        return ((s == null) || (s.length() == 0) || s.equalsIgnoreCase("null"));
+    }
+    
     /**
      * Load an image specified by the data parameter into an ImageView (override
      * {@link ImageWorker#processBitmap(Object)} to define the processing logic). A memory and disk
@@ -123,7 +127,7 @@ public abstract class ImageWorker {
      * @param imageView The ImageView to bind the downloaded image to.
      */
     public void loadImage(Object data, ImageView imageView, Bitmap loadingBitmap) {
-        if (data == null) {
+        if (data == null || isNullOrEmpty(data.toString())) {
             return;
         }
 
