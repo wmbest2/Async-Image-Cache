@@ -25,6 +25,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.*;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
@@ -110,8 +111,16 @@ public abstract class ImageWorker {
         }
         loadImage(data, imageView, loadingBitmaps.get(resId));
     }
+    
+    public static boolean isLocalUri(final String aString) {
+        return isLocalUri(Uri.parse(aString));
+    }
+    
+    protected static boolean isLocalUri(final Uri aUri) {
+        return !aUri.getScheme().equals("http") && !aUri.getScheme().equals("https");
+    }
 
-    private static boolean isNullOrEmpty(final String s) {
+    protected boolean isNullOrEmpty(final String s) {
         return ((s == null) || (s.length() == 0) || s.equalsIgnoreCase("null"));
     }
     

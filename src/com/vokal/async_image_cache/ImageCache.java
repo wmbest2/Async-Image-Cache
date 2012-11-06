@@ -189,7 +189,7 @@ public class ImageCache {
 
         synchronized (mDiskCacheLock) {
             // Add to disk cache
-            if (mDiskLruCache != null) {
+            if (mDiskLruCache != null && !ImageWorker.isLocalUri(data)) {
                 final String key = hashKeyForDisk(data);
                 OutputStream out = null;
                 try {

@@ -172,7 +172,7 @@ public class ImageFetcher extends ImageWorker {
         // Check if the urlString is a local File URI and attempt to get FileDescriptor
         if (fileDescriptor == null) {            
             Uri uri = Uri.parse(urlString);
-            if (!uri.getScheme().equals("http") && !uri.getScheme().equals("https")) {
+            if (isLocalUri(uri)) {
                 final ContentResolver cr = sContext.getContentResolver();
                 try {
                     fileInputStream = (FileInputStream) cr.openInputStream(uri);
