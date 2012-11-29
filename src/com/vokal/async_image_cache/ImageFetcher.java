@@ -28,6 +28,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.provider.ContactsContract;
 import android.provider.MediaStore.Images;
+import android.util.Log;
 import android.widget.ImageView;
 
 import java.io.*;
@@ -144,8 +145,13 @@ public class ImageFetcher extends ImageWorker {
 
     @Override
     protected Bitmap processBitmap(Object key) {
-        final ImageData imageData = (ImageData) key;
-        return processBitmap(imageData.mKey, imageData.mType);
+        try {
+            final ImageData imageData = (ImageData) key;
+            return processBitmap(imageData.mKey, imageData.mType);
+        } catch (OutOfMemoryError e) {
+            Log.e(TAG, "processBitmap - Out of memory while loading image: " + key);
+            return null;
+        }
     }
 
     /**
@@ -281,11 +287,20 @@ public class ImageFetcher extends ImageWorker {
 
         try {
             final URL url = new URL(urlString);
-            urlConnection = (HttpURLConnection) url.openConnection();
-            if (urlConnection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                return null;
+            try {
+                urlConnection = (HttpURLConnection) url.openConnection();
+                if (urlConnection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                    return null;
+                }
+                in = new BufferedInputStream(urlConnection.getInputStream(), IO_BUFFER_SIZE_BYTES);
+            } catch (ClassCastException e) {
+                try {
+                    in = new BufferedInputStream(url.openConnection().getInputStream(), IO_BUFFER_SIZE_BYTES);
+                } catch (Exception f) {
+                    f.printStackTrace();
+                    return null;
+                }
             }
-            in = new BufferedInputStream(urlConnection.getInputStream(), IO_BUFFER_SIZE_BYTES);
             out = new ByteArrayOutputStream(IO_BUFFER_SIZE_BYTES);
 
             final byte[] buffer = new byte[128];
