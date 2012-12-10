@@ -112,6 +112,10 @@ public abstract class ImageWorker {
         loadImage(data, imageView, loadingBitmaps.get(resId));
     }
     
+    public static boolean isValidUrl(final String aUrl) {
+        return Uri.parse(aUrl).getScheme() != null;
+    }
+    
     public static boolean isLocalUri(final String aString) {
         return isLocalUri(Uri.parse(aString));
     }
@@ -120,7 +124,7 @@ public abstract class ImageWorker {
         return !aUri.getScheme().equals("http") && !aUri.getScheme().equals("https");
     }
 
-    protected boolean isNullOrEmpty(final String s) {
+    protected static boolean isNullOrEmpty(final String s) {
         return ((s == null) || (s.length() == 0) || s.equalsIgnoreCase("null"));
     }
     
@@ -136,7 +140,7 @@ public abstract class ImageWorker {
      * @param imageView The ImageView to bind the downloaded image to.
      */
     public void loadImage(Object data, ImageView imageView, Bitmap loadingBitmap) {
-        if (data == null || isNullOrEmpty(data.toString())) {
+        if (data == null || isNullOrEmpty(data.toString()) || !isValidUrl(data.toString())) {
             return;
         }
 
