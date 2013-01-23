@@ -291,7 +291,7 @@ public class ImageFetcher extends ImageWorker {
             URLConnection conn = url.openConnection();
 
             if (conn != null && conn instanceof HttpURLConnection) {
-                urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection = (HttpURLConnection) conn;
                 if (urlConnection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                     return null;
                 }
