@@ -287,20 +287,17 @@ public class ImageFetcher extends ImageWorker {
 
         try {
             final URL url = new URL(urlString);
-            try {
+
+            URLConnection conn = url.openConnection();
+
+            if (conn != null && conn instanceof HttpURLConnection) {
                 urlConnection = (HttpURLConnection) url.openConnection();
                 if (urlConnection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                     return null;
                 }
-                in = new BufferedInputStream(urlConnection.getInputStream(), IO_BUFFER_SIZE_BYTES);
-            } catch (ClassCastException e) {
-                try {
-                    in = new BufferedInputStream(url.openConnection().getInputStream(), IO_BUFFER_SIZE_BYTES);
-                } catch (Exception f) {
-                    f.printStackTrace();
-                    return null;
-                }
             }
+
+            in = new BufferedInputStream(conn.getInputStream(), IO_BUFFER_SIZE_BYTES);
             out = new ByteArrayOutputStream(IO_BUFFER_SIZE_BYTES);
 
             final byte[] buffer = new byte[128];
