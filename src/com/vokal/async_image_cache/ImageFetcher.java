@@ -32,8 +32,7 @@ import android.util.Log;
 import android.widget.ImageView;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.*;
 
 /**
  * A subclass of {@link ImageWorker} that fetches images from a URL.
